@@ -322,7 +322,9 @@
         nama: get("nama").trim()
       };
 
-      var allEmpty = !rec.tarikh && !rec.masa && !rec.lokasi && !rec.suhu && !rec.status;
+      // Status & Cadangan Tindakan lajur diisi AUTO oleh formula walaupun baris kosong,
+      // jadi lajur tu tak boleh dipakai untuk tentukan sama ada baris ni "kosong" atau tidak.
+      var allEmpty = !rec.tarikh && !rec.masa && !rec.lokasi && !rec.suhu && !rec.kelembapan && !rec.nama;
       if (allEmpty) return;
 
       var isContoh = [rec.tarikh, rec.masa, rec.lokasi, rec.status, rec.nama].some(function(v){
