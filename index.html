@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Log Suhu Live &middot; DC Sendayan</title>
+<meta name="theme-color" content="#16294A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Log Suhu">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --navy:#16294A;
+    --navy-deep:#101d38;
+    --navy-card:#1c3358;
+    --navy-card2:#213a63;
+    --teal:#0E7C7B;
+    --teal-light:#12a3a1;
+    --ice:#D6E1F1;
+    --ice-dim:#9fb1cc;
+    --amber:#D9A62B;
+    --orange:#E07A3E;
+    --red:#E0555A;
+    --border:rgba(214,225,241,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #1d3661 0%, var(--navy) 45%, var(--navy-deep) 100%);
+    color:var(--ice);
+    font-family:Calibri, "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+    padding-bottom:env(safe-area-inset-bottom, 24px);
+    -webkit-tap-highlight-color:transparent;
+  }
+  h1,h2,h3,.serif{font-family:Georgia, "Times New Roman", serif;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px;}
+
+  @keyframes fadeInUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+  .fade-in{animation:fadeInUp .45s ease both;}
+
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, rgba(16,29,56,0.97) 70%, rgba(16,29,56,0.85));
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    padding-top:calc(env(safe-area-inset-top,0px) + 14px);
+    padding-bottom:10px;
+  }
+  .brandline{font-size:11px; letter-spacing:.06em; color:var(--ice-dim); text-transform:uppercase; margin-bottom:2px;}
+  .titlerow{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .titlerow h1{font-size:22px; margin:0 0 2px 0; color:#fff; line-height:1.15;}
+  .subtitle{font-size:12.5px; color:var(--ice-dim); margin:0;}
+  .statusrow{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--ice-dim);}
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--ice-dim); flex:none;}
+  .dot.live{background:var(--teal-light); box-shadow:0 0 0 0 rgba(18,163,161,.6); animation:pulse 1.6s infinite;}
+  .dot.error{background:var(--red);}
+  .dot.connecting{background:var(--amber); animation:blink 1s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(18,163,161,.55);}
+    70%{box-shadow:0 0 0 8px rgba(18,163,161,0);}
+    100%{box-shadow:0 0 0 0 rgba(18,163,161,0);}
+  }
+  @keyframes blink{ 50%{opacity:.35;} }
+  .status-text b{color:#fff; font-weight:600;}
+  .refresh-btn{
+    margin-left:auto; display:flex; align-items:center; gap:6px;
+    background:var(--navy-card2); border:1px solid var(--border); color:var(--ice);
+    padding:6px 10px; border-radius:20px; font-size:12px; cursor:pointer;
+  }
+  .refresh-btn:active{transform:scale(.96);}
+  .refresh-btn svg{width:13px; height:13px; transition:transform .5s ease;}
+  .refresh-btn.spin svg{animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  nav.views{display:flex; gap:8px; margin-top:14px;}
+  .view-btn{
+    flex:1; text-align:center; padding:9px 8px; border-radius:12px; font-size:13px; font-weight:600;
+    background:var(--navy-card); color:var(--ice-dim); border:1px solid var(--border); cursor:pointer;
+  }
+  .view-btn.active{background:var(--teal); color:#fff; border-color:var(--teal);}
+
+  .months{display:flex; gap:8px; overflow-x:auto; padding:12px 0 2px; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch;}
+  .months::-webkit-scrollbar{display:none;}
+  .month-pill{
+    flex:none; scroll-snap-align:start;
+    padding:7px 14px; border-radius:18px; font-size:12.5px; white-space:nowrap;
+    background:var(--navy-card); color:var(--ice-dim); border:1px solid var(--border); cursor:pointer;
+  }
+  .month-pill.active{background:var(--ice); color:var(--navy-deep); border-color:var(--ice); font-weight:700;}
+
+  main{padding:14px 0 40px;}
+  .card{
+    background:linear-gradient(180deg, var(--navy-card) 0%, var(--navy-card2) 100%);
+    border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:12px;
+  }
+  .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;}
+  .kpi{background:var(--navy-card); border:1px solid var(--border); border-radius:14px; padding:12px;}
+  .kpi .label{font-size:11px; color:var(--ice-dim); text-transform:uppercase; letter-spacing:.04em;}
+  .kpi .value{font-size:22px; font-weight:700; color:#fff; margin-top:4px; font-family:Georgia,serif;}
+  .kpi .value small{font-size:12px; color:var(--ice-dim); font-family:Calibri,sans-serif; font-weight:400;}
+
+  .badge{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:700; letter-spacing:.02em;}
+  .badge.NORMAL{background:rgba(18,163,161,.18); color:#5be0dd;}
+  .badge.PERHATIAN{background:rgba(217,166,43,.18); color:var(--amber);}
+  .badge.ALERT{background:rgba(224,122,62,.2); color:var(--orange);}
+  .badge.CRITICAL{background:rgba(224,85,90,.22); color:var(--red);}
+  .badge.LAIN{background:rgba(214,225,241,.12); color:var(--ice-dim);}
+
+  .breakdown{display:flex; flex-direction:column; gap:8px;}
+  .brow{display:flex; align-items:center; gap:10px; font-size:12.5px;}
+  .brow .lbl{width:96px; flex:none; color:var(--ice-dim);}
+  .brow .bar{flex:1; height:8px; border-radius:6px; background:rgba(214,225,241,.08); overflow:hidden;}
+  .brow .bar span{display:block; height:100%; border-radius:6px;}
+  .brow .cnt{width:26px; text-align:right; font-weight:700; color:#fff;}
+
+  .warn-banner{border:1px solid rgba(224,85,90,.4); background:rgba(224,85,90,.1); border-radius:14px; padding:12px 14px; margin-bottom:12px;}
+  .warn-banner .wtitle{font-size:12.5px; font-weight:700; color:var(--red); margin-bottom:6px;}
+  .warn-item{font-size:12.5px; color:var(--ice); padding:4px 0; border-top:1px dashed rgba(224,85,90,.25);}
+  .warn-item:first-child{border-top:none;}
+
+  .refcard{border:1px solid var(--border); border-radius:14px; padding:14px;}
+  .refcard h3{margin:0 0 10px 0; font-size:14px; color:#fff;}
+  .refrow{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-top:1px solid var(--border);}
+  .refrow:first-of-type{border-top:none;}
+  .refrow .rname{color:var(--ice-dim);}
+  .refrow .rval{color:var(--teal-light); font-weight:700;}
+  .refnote{margin-top:10px; font-size:11px; color:var(--ice-dim); line-height:1.5;}
+
+  .rec-card{border-left:3px solid var(--ice-dim); padding-left:12px;}
+  .rec-card.NORMAL{border-left-color:var(--teal-light);}
+  .rec-card.PERHATIAN{border-left-color:var(--amber);}
+  .rec-card.ALERT{border-left-color:var(--orange);}
+  .rec-card.CRITICAL{border-left-color:var(--red);}
+  .rec-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;}
+  .rec-date{font-size:14px; font-weight:700; color:#fff; font-family:Georgia,serif;}
+  .rec-masa{font-size:11.5px; color:var(--ice-dim); margin-top:2px;}
+  .rec-body{display:flex; gap:14px; margin-bottom:8px; flex-wrap:wrap;}
+  .rec-metric .m-label{font-size:10.5px; color:var(--ice-dim); text-transform:uppercase;}
+  .rec-metric .m-value{font-size:18px; font-weight:700; color:#fff; font-family:Georgia,serif;}
+  .rec-loc{font-size:11.5px; color:var(--ice-dim); background:rgba(214,225,241,.08); padding:3px 9px; border-radius:10px; display:inline-block; margin-bottom:8px;}
+  .rec-note{font-size:12px; color:var(--ice); line-height:1.5; margin-top:6px;}
+  .rec-note b{color:var(--ice-dim); font-weight:600;}
+  .rec-foot{font-size:11px; color:var(--ice-dim); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);}
+
+  .empty, .errbox{text-align:center; padding:36px 16px; color:var(--ice-dim);}
+  .empty .big, .errbox .big{font-size:34px; margin-bottom:10px;}
+  .errbox{border:1px solid rgba(224,85,90,.35); background:rgba(224,85,90,.08); border-radius:16px;}
+  .errbox p{font-size:12.5px; line-height:1.6; max-width:340px; margin:6px auto 12px;}
+  .retry-btn{background:var(--teal); color:#fff; border:none; padding:9px 18px; border-radius:20px; font-size:12.5px; font-weight:700; cursor:pointer;}
+
+  .skel{background:linear-gradient(90deg, var(--navy-card) 25%, var(--navy-card2) 37%, var(--navy-card) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:14px; height:78px; margin-bottom:12px;}
+  @keyframes shimmer{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+
+  footer{padding:20px 16px 30px; text-align:center; font-size:10.5px; color:var(--ice-dim); line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brandline">DXN Biotech Consultants Sdn Bhd &middot; DC Sendayan</div>
+    <div class="titlerow">
+      <div>
+        <h1>Log Suhu Live</h1>
+        <p class="subtitle">Bilik QC &middot; Packing &middot; Chiller &mdash; SOP-QCP-TEMP-001</p>
+      </div>
+    </div>
+    <div class="statusrow">
+      <span id="liveDot" class="dot connecting"></span>
+      <span class="status-text" id="statusText">Menyambung&hellip;</span>
+      <button class="refresh-btn" id="refreshBtn" title="Muat semula">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        Muat semula
+      </button>
+    </div>
+    <nav class="views">
+      <button class="view-btn active" data-view="ringkasan">Ringkasan</button>
+      <button class="view-btn" data-view="rekod">Rekod</button>
+    </nav>
+    <div class="months" id="monthPills"></div>
+  </header>
+
+  <main id="mainArea">
+    <div class="skel"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+  </main>
+
+  <footer>
+    Data dipaparkan terus daripada Google Sheets &ldquo;BORONG LOG SUHU 2026&rdquo; (paparan sahaja &mdash; bukan borang isian).<br>
+    Tab Panduan &amp; Template Bulanan sengaja tidak dipaparkan di sini.<br>
+    Dokumen sokongan operasi &mdash; tidak menggantikan SOP-QCP-TEMP-001 rasmi.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var SHEET_ID = "1CukyNyJlPpnHpLA6wsRwgycgCQfsf8Mw";
+  var MONTHS = ["Januari 2026","Februari 2026","Mac 2026","April 2026","Mei 2026","Jun 2026",
+                "Julai 2026","Ogos 2026","September 2026","Oktober 2026","November 2026","Disember 2026"];
+  var MONTH_SHORT = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogo","Sep","Okt","Nov","Dis"];
+  var REFRESH_MS = 60000;
+  var TEMP_STD = [
+    { label: "Bilik QC & Packing", range: "16&ndash;18&deg;C" },
+    { label: "Chiller", range: "1&ndash;4&deg;C" }
+  ];
+
+  function defaultMonthIndex(){
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    if (y === 2026) return m;
+    if (y < 2026) return 0;
+    return 11;
+  }
+
+  var state = {
+    monthIndex: defaultMonthIndex(),
+    view: "ringkasan",
+    liveState: "connecting", // connecting | live | error
+    lastUpdated: null,
+    isLoading: false,
+    cache: {}, // monthIndex -> rows
+    errMsg: ""
+  };
+
+  var cbCounter = 0;
+  function fetchSheetJSONP(sheetName, timeoutMs){
+    timeoutMs = timeoutMs || 12000;
+    return new Promise(function(resolve, reject){
+      var cbName = "lsCB_" + Date.now() + "_" + (cbCounter++);
+      var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+        "/gviz/tq?tqx=out:json;responseHandler:" + cbName +
+        "&sheet=" + encodeURIComponent(sheetName) + "&headers=1";
+
+      var settled = false;
+      var script = document.createElement("script");
+
+      var timer = setTimeout(function(){
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error("timeout"));
+      }, timeoutMs);
+
+      function cleanup(){
+        clearTimeout(timer);
+        try { delete window[cbName]; } catch(e){ window[cbName] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[cbName] = function(json){
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(json);
+      };
+
+      script.onerror = function(){
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error("script_error"));
+      };
+
+      script.src = url;
+      document.head.appendChild(script);
+    });
+  }
+
+  function normLabel(s){ return (s || "").toString().toLowerCase(); }
+
+  function mapColumns(cols){
+    var map = {};
+    cols.forEach(function(col, idx){
+      var label = normLabel(col && col.label);
+      if (!label) return;
+      if (map.tarikh === undefined && label.indexOf("tarikh") !== -1) map.tarikh = idx;
+      else if (map.masa === undefined && label.indexOf("masa") !== -1) map.masa = idx;
+      else if (map.lokasi === undefined && label.indexOf("lokasi") !== -1) map.lokasi = idx;
+      else if (map.suhu === undefined && label.indexOf("suhu") !== -1) map.suhu = idx;
+      else if (map.kelembapan === undefined && (label.indexOf("lembap") !== -1)) map.kelembapan = idx;
+      else if (map.status === undefined && label.indexOf("status") !== -1) map.status = idx;
+      else if (map.cadangan === undefined && label.indexOf("cadangan") !== -1) map.cadangan = idx;
+      else if (map.tindakan === undefined && (label.indexOf("tindakan diambil") !== -1 || label.indexOf("catatan") !== -1)) map.tindakan = idx;
+      else if (map.nama === undefined && (label.indexOf("nama") !== -1 || label.indexOf("paraf") !== -1)) map.nama = idx;
+    });
+    return map;
+  }
+
+  function cellText(cell){
+    if (!cell) return "";
+    if (cell.f !== undefined && cell.f !== null && cell.f !== "") return String(cell.f);
+    if (cell.v === undefined || cell.v === null) return "";
+    return String(cell.v);
+  }
+
+  function parseTable(json){
+    if (!json || !json.table) return [];
+    var cols = json.table.cols || [];
+    var rows = json.table.rows || [];
+    var map = mapColumns(cols);
+
+    var out = [];
+    rows.forEach(function(r){
+      var c = (r && r.c) || [];
+      function get(key){ return map[key] !== undefined ? cellText(c[map[key]]) : ""; }
+
+      var rec = {
+        tarikh: get("tarikh").trim(),
+        masa: get("masa").trim(),
+        lokasi: get("lokasi").trim(),
+        suhu: get("suhu").trim(),
+        kelembapan: get("kelembapan").trim(),
+        status: get("status").trim(),
+        cadangan: get("cadangan").trim(),
+        tindakan: get("tindakan").trim(),
+        nama: get("nama").trim()
+      };
+
+      var allEmpty = !rec.tarikh && !rec.masa && !rec.lokasi && !rec.suhu && !rec.status;
+      if (allEmpty) return;
+
+      var isContoh = [rec.tarikh, rec.masa, rec.lokasi, rec.status, rec.nama].some(function(v){
+        return v.toUpperCase() === "CONTOH";
+      });
+      if (isContoh) return;
+
+      out.push(rec);
+    });
+    return out;
+  }
+
+  function statusKey(s){
+    var u = (s || "").toUpperCase();
+    if (u.indexOf("CRITICAL") !== -1) return "CRITICAL";
+    if (u.indexOf("ALERT") !== -1) return "ALERT";
+    if (u.indexOf("PERHATIAN") !== -1) return "PERHATIAN";
+    if (u.indexOf("NORMAL") !== -1) return "NORMAL";
+    return u ? "LAIN" : "LAIN";
+  }
+
+  function computeStats(rows){
+    var s = { total: rows.length, NORMAL:0, PERHATIAN:0, ALERT:0, CRITICAL:0, LAIN:0, avgSuhu: null, latest: rows.length ? rows[rows.length-1] : null };
+    var sum = 0, cnt = 0;
+    rows.forEach(function(r){
+      s[statusKey(r.status)]++;
+      var n = parseFloat(String(r.suhu).replace(",", "."));
+      if (!isNaN(n)) { sum += n; cnt++; }
+    });
+    if (cnt) s.avgSuhu = (sum / cnt).toFixed(1);
+    return s;
+  }
+
+  function esc(s){
+    return (s || "").toString().replace(/[&<>"]/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c];
+    });
+  }
+
+  function timeAgo(d){
+    if (!d) return "";
+    var sec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (sec < 5) return "baru sahaja";
+    if (sec < 60) return sec + " saat lalu";
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + " minit lalu";
+    var hr = Math.floor(min / 60);
+    return hr + " jam lalu";
+  }
+
+  // ---------- Rendering ----------
+
+  var monthPillsEl = document.getElementById("monthPills");
+  var mainEl = document.getElementById("mainArea");
+  var liveDotEl = document.getElementById("liveDot");
+  var statusTextEl = document.getElementById("statusText");
+  var refreshBtn = document.getElementById("refreshBtn");
+
+  function renderMonthPills(){
+    monthPillsEl.innerHTML = MONTHS.map(function(m, i){
+      return '<button class="month-pill' + (i === state.monthIndex ? ' active' : '') + '" data-idx="' + i + '">' +
+        MONTH_SHORT[i] + " '26</button>";
+    }).join("");
+  }
+
+  function renderStatusBar(){
+    liveDotEl.className = "dot " + state.liveState;
+    if (state.liveState === "connecting"){
+      statusTextEl.innerHTML = "Menyambung&hellip;";
+    } else if (state.liveState === "live"){
+      statusTextEl.innerHTML = "<b>Live</b> &middot; dikemas kini " + timeAgo(state.lastUpdated);
+    } else {
+      statusTextEl.innerHTML = "<b>Ralat sambungan</b>";
+    }
+    document.querySelectorAll(".view-btn").forEach(function(b){
+      b.classList.toggle("active", b.getAttribute("data-view") === state.view);
+    });
+  }
+
+  function refCardHtml(){
+    var rows = TEMP_STD.map(function(t){
+      return '<div class="refrow"><span class="rname">' + esc(t.label) + '</span><span class="rval">' + t.range + '</span></div>';
+    }).join("");
+    return '<div class="card refcard">' +
+      '<h3>Rujukan Pantas Julat Suhu</h3>' + rows +
+      '<div class="refnote">Berdasarkan SOP-QCP-TEMP-001. Rujuk tab &ldquo;Rujukan Standard&rdquo; pada Google Sheets untuk julat kelembapan &amp; butiran penuh.</div>' +
+      '</div>';
+  }
+
+  function emptyHtml(monthLabel){
+    return '<div class="card empty fade-in"><div class="big">&#128203;</div>' +
+      '<div>Tiada rekod suhu direkodkan lagi untuk<br><b style="color:#fff">' + esc(monthLabel) + '</b></div></div>';
+  }
+
+  function errorHtml(){
+    return '<div class="errbox fade-in"><div class="big">&#9888;&#65039;</div>' +
+      '<p>Tidak dapat menyambung ke Google Sheets buat masa ini. Sila pastikan sharing fail ditetapkan kepada <b>&ldquo;Sesiapa yang ada pautan &ndash; Viewer&rdquo;</b>, dan semak sambungan internet.</p>' +
+      '<button class="retry-btn" id="retryBtn">Cuba Lagi</button></div>';
+  }
+
+  function loadingHtml(){
+    return '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  }
+
+  function ringkasanHtml(rows, stats, monthLabel){
+    var html = "";
+
+    var criticalRows = rows.filter(function(r){ var k = statusKey(r.status); return k === "CRITICAL" || k === "ALERT"; }).slice(-3).reverse();
+    if (criticalRows.length){
+      html += '<div class="warn-banner fade-in"><div class="wtitle">&#9888;&#65039; Amaran Terkini &mdash; Perlu Perhatian</div>' +
+        criticalRows.map(function(r){
+          return '<div class="warn-item"><b>' + esc(r.tarikh) + '</b> &middot; ' + esc(r.masa) + ' &middot; ' + esc(r.lokasi) +
+            ' &mdash; ' + esc(r.suhu) + '&deg;C <span class="badge ' + statusKey(r.status) + '" style="margin-left:6px">' + esc(statusKey(r.status)) + '</span></div>';
+        }).join("") + '</div>';
+    }
+
+    html += '<div class="card fade-in">';
+    html += '<div class="kpi-grid">';
+    html += '<div class="kpi"><div class="label">Jumlah Rekod</div><div class="value">' + stats.total + '</div></div>';
+    html += '<div class="kpi"><div class="label">Purata Suhu</div><div class="value">' + (stats.avgSuhu !== null ? stats.avgSuhu + '<small>&deg;C</small>' : '&mdash;') + '</div></div>';
+    html += '<div class="kpi"><div class="label">Alert / Critical</div><div class="value">' + (stats.ALERT + stats.CRITICAL) + '</div></div>';
+    html += '<div class="kpi"><div class="label">Rekod Terkini</div><div class="value" style="font-size:14px; line-height:1.3;">' +
+      (stats.latest ? esc(stats.latest.tarikh) + '<br><small>' + esc(stats.latest.masa) + '</small>' : '&mdash;') + '</div></div>';
+    html += '</div>';
+
+    var maxCnt = Math.max(stats.NORMAL, stats.PERHATIAN, stats.ALERT, stats.CRITICAL, 1);
+    var barColors = { NORMAL:"var(--teal-light)", PERHATIAN:"var(--amber)", ALERT:"var(--orange)", CRITICAL:"var(--red)" };
+    html += '<div class="breakdown">';
+    ["NORMAL","PERHATIAN","ALERT","CRITICAL"].forEach(function(k){
+      var pct = Math.round((stats[k] / maxCnt) * 100);
+      html += '<div class="brow"><span class="lbl">' + k + '</span><span class="bar"><span style="width:' + pct + '%; background:' + barColors[k] + '"></span></span><span class="cnt">' + stats[k] + '</span></div>';
+    });
+    html += '</div></div>';
+
+    html += refCardHtml();
+    return html || emptyHtml(monthLabel);
+  }
+
+  function recordCardHtml(r){
+    var k = statusKey(r.status);
+    var html = '<div class="card rec-card ' + k + ' fade-in">';
+    html += '<div class="rec-top"><div><div class="rec-date">' + esc(r.tarikh || "&mdash;") + '</div><div class="rec-masa">' + esc(r.masa || "") + '</div></div>' +
+      '<span class="badge ' + k + '">' + esc(k) + '</span></div>';
+    if (r.lokasi) html += '<div class="rec-loc">' + esc(r.lokasi) + '</div><br>';
+    html += '<div class="rec-body">';
+    if (r.suhu) html += '<div class="rec-metric"><div class="m-label">Suhu</div><div class="m-value">' + esc(r.suhu) + '&deg;C</div></div>';
+    if (r.kelembapan) html += '<div class="rec-metric"><div class="m-label">Kelembapan</div><div class="m-value">' + esc(r.kelembapan) + '%</div></div>';
+    html += '</div>';
+    if (r.cadangan) html += '<div class="rec-note"><b>Cadangan:</b> ' + esc(r.cadangan) + '</div>';
+    if (r.tindakan) html += '<div class="rec-note"><b>Tindakan/Catatan:</b> ' + esc(r.tindakan) + '</div>';
+    if (r.nama) html += '<div class="rec-foot">Diperiksa oleh: ' + esc(r.nama) + '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function rekodHtml(rows, monthLabel){
+    if (!rows.length) return emptyHtml(monthLabel);
+    var ordered = rows.slice().reverse();
+    return ordered.map(recordCardHtml).join("");
+  }
+
+  function render(){
+    renderMonthPills();
+    renderStatusBar();
+
+    var monthLabel = MONTHS[state.monthIndex];
+
+    if (state.isLoading && !state.cache[state.monthIndex]){
+      mainEl.innerHTML = loadingHtml();
+      return;
+    }
+
+    if (state.liveState === "error" && !state.cache[state.monthIndex]){
+      mainEl.innerHTML = errorHtml();
+      var retryBtn = document.getElementById("retryBtn");
+      if (retryBtn) retryBtn.addEventListener("click", function(){ loadMonth(state.monthIndex, false); });
+      return;
+    }
+
+    var rows = state.cache[state.monthIndex] || [];
+    var stats = computeStats(rows);
+
+    if (state.view === "ringkasan"){
+      mainEl.innerHTML = ringkasanHtml(rows, stats, monthLabel);
+    } else {
+      mainEl.innerHTML = rekodHtml(rows, monthLabel);
+    }
+  }
+
+  // ---------- Data loading ----------
+
+  function loadMonth(idx, silent){
+    if (state.isLoading) return;
+    state.isLoading = true;
+    if (!silent) { state.liveState = "connecting"; render(); }
+
+    fetchSheetJSONP(MONTHS[idx]).then(function(json){
+      if (json && json.status === "error"){
+        throw new Error((json.errors && json.errors[0] && json.errors[0].detailed_message) || "sheet_error");
+      }
+      var rows = parseTable(json);
+      state.cache[idx] = rows;
+      state.liveState = "live";
+      state.lastUpdated = new Date();
+    }).catch(function(){
+      state.liveState = "error";
+    }).then(function(){
+      state.isLoading = false;
+      render();
+    });
+  }
+
+  var pollTimer = null;
+  function resetPolling(){
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function(){
+      loadMonth(state.monthIndex, true);
+    }, REFRESH_MS);
+  }
+
+  var tickTimer = setInterval(function(){
+    if (state.liveState === "live") renderStatusBar();
+  }, 5000);
+
+  // ---------- Events ----------
+
+  monthPillsEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".month-pill");
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute("data-idx"), 10);
+    if (idx === state.monthIndex) return;
+    state.monthIndex = idx;
+    if (state.cache[idx]){
+      state.liveState = "live";
+      render();
+    } else {
+      loadMonth(idx, false);
+    }
+    resetPolling();
+  });
+
+  document.querySelectorAll(".view-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      state.view = btn.getAttribute("data-view");
+      render();
+    });
+  });
+
+  refreshBtn.addEventListener("click", function(){
+    refreshBtn.classList.add("spin");
+    loadMonth(state.monthIndex, false);
+    setTimeout(function(){ refreshBtn.classList.remove("spin"); }, 800);
+  });
+
+  // ---------- Init ----------
+
+  renderMonthPills();
+  renderStatusBar();
+  loadMonth(state.monthIndex, false);
+  resetPolling();
+
+})();
+</script>
+</body>
+</html>
