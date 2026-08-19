@@ -1,7 +1,7 @@
 {
-  "name": "Log Suhu Live - DC Sendayan",
-  "short_name": "Log Suhu",
-  "description": "Pemantauan live Borang Log Suhu QC, Packing & Chiller - DXN DC Sendayan (SOP-QCP-TEMP-001)",
+  "name": "Sistem Pemantauan Suhu Live - DC Sendayan",
+  "short_name": "Pemantauan Suhu",
+  "description": "Sistem Pemantauan Suhu Live QC, Packing & Chiller - DXN DC Sendayan (SOP-QCP-TEMP-001)",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
