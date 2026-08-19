@@ -235,7 +235,7 @@
       var cbName = "lsCB_" + Date.now() + "_" + (cbCounter++);
       var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
         "/gviz/tq?tqx=out:json;responseHandler:" + cbName +
-        "&sheet=" + encodeURIComponent(sheetName) + "&headers=1";
+        "&sheet=" + encodeURIComponent(sheetName) + "&headers=1&range=A2:Z5000";
 
       var settled = false;
       var script = document.createElement("script");
@@ -288,6 +288,7 @@
       else if (map.cadangan === undefined && label.indexOf("cadangan") !== -1) map.cadangan = idx;
       else if (map.tindakan === undefined && (label.indexOf("tindakan diambil") !== -1 || label.indexOf("catatan") !== -1)) map.tindakan = idx;
       else if (map.nama === undefined && (label.indexOf("nama") !== -1 || label.indexOf("paraf") !== -1)) map.nama = idx;
+      else if (map.bil === undefined && label.trim() === "bil") map.bil = idx;
     });
     return map;
   }
@@ -311,6 +312,7 @@
       function get(key){ return map[key] !== undefined ? cellText(c[map[key]]) : ""; }
 
       var rec = {
+        bil: get("bil").trim(),
         tarikh: get("tarikh").trim(),
         masa: get("masa").trim(),
         lokasi: get("lokasi").trim(),
@@ -327,7 +329,7 @@
       var allEmpty = !rec.tarikh && !rec.masa && !rec.lokasi && !rec.suhu && !rec.kelembapan && !rec.nama;
       if (allEmpty) return;
 
-      var isContoh = [rec.tarikh, rec.masa, rec.lokasi, rec.status, rec.nama].some(function(v){
+      var isContoh = [rec.bil, rec.tarikh, rec.masa, rec.lokasi, rec.status, rec.nama].some(function(v){
         return v.toUpperCase() === "CONTOH";
       });
       if (isContoh) return;
