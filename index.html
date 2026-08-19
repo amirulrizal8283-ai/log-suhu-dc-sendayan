@@ -300,10 +300,26 @@
     return String(cell.v);
   }
 
+  // Sheet kadang-kadang dah format nombor dengan unit terus (cth "24.3°C"),
+  // jadi buang unit sedia ada supaya UI tak tambah unit dua kali.
+  function formatTemp(raw){
+    var s = (raw || "").toString().trim();
+    s = s.replace(/\s*°?\s*c\s*$/i, "").replace(/°\s*$/, "").trim();
+    return s;
+  }
+  function formatPercent(raw){
+    var s = (raw || "").toString().trim();
+    s = s.replace(/\s*%\s*$/, "").trim();
+    return s;
+  }
+
   function parseTable(json){
     if (!json || !json.table) return [];
     var cols = json.table.cols || [];
-    var rows = json.table.rows || [];
+    var rawRows = json.table.rows || [];
+    // Baris pertama data (selepas baris tajuk lajur) SENTIASA baris CONTOH
+    // pada setiap tab bulanan (struktur tetap dari Template Bulanan) - abaikan terus.
+    var rows = rawRows.slice(1);
     var map = mapColumns(cols);
 
     var out = [];
@@ -439,7 +455,7 @@
       html += '<div class="warn-banner fade-in"><div class="wtitle">&#9888;&#65039; Amaran Terkini &mdash; Perlu Perhatian</div>' +
         criticalRows.map(function(r){
           return '<div class="warn-item"><b>' + esc(r.tarikh) + '</b> &middot; ' + esc(r.masa) + ' &middot; ' + esc(r.lokasi) +
-            ' &mdash; ' + esc(r.suhu) + '&deg;C <span class="badge ' + statusKey(r.status) + '" style="margin-left:6px">' + esc(statusKey(r.status)) + '</span></div>';
+            ' &mdash; ' + esc(formatTemp(r.suhu)) + '&deg;C <span class="badge ' + statusKey(r.status) + '" style="margin-left:6px">' + esc(statusKey(r.status)) + '</span></div>';
         }).join("") + '</div>';
     }
 
@@ -474,8 +490,8 @@
       '<span class="badge ' + k + '">' + esc(badgeLabel) + '</span></div>';
     if (r.lokasi) html += '<div class="rec-loc">' + esc(r.lokasi) + '</div><br>';
     html += '<div class="rec-body">';
-    if (r.suhu) html += '<div class="rec-metric"><div class="m-label">Suhu</div><div class="m-value">' + esc(r.suhu) + '&deg;C</div></div>';
-    if (r.kelembapan) html += '<div class="rec-metric"><div class="m-label">Kelembapan</div><div class="m-value">' + esc(r.kelembapan) + '%</div></div>';
+    if (r.suhu) html += '<div class="rec-metric"><div class="m-label">Suhu</div><div class="m-value">' + esc(formatTemp(r.suhu)) + '&deg;C</div></div>';
+    if (r.kelembapan) html += '<div class="rec-metric"><div class="m-label">Kelembapan</div><div class="m-value">' + esc(formatPercent(r.kelembapan)) + '%</div></div>';
     html += '</div>';
     if (r.cadangan) html += '<div class="rec-note"><b>Cadangan:</b> ' + esc(r.cadangan) + '</div>';
     if (r.tindakan) html += '<div class="rec-note"><b>Tindakan/Catatan:</b> ' + esc(r.tindakan) + '</div>';
