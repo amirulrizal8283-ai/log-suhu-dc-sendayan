@@ -463,9 +463,11 @@
 
   function recordCardHtml(r){
     var k = statusKey(r.status);
+    var badgeLabel = r.status ? k : "Belum Lengkap";
+    var dateLabel = r.tarikh ? esc(r.tarikh) : "\u2014";
     var html = '<div class="card rec-card ' + k + ' fade-in">';
-    html += '<div class="rec-top"><div><div class="rec-date">' + esc(r.tarikh || "&mdash;") + '</div><div class="rec-masa">' + esc(r.masa || "") + '</div></div>' +
-      '<span class="badge ' + k + '">' + esc(k) + '</span></div>';
+    html += '<div class="rec-top"><div><div class="rec-date">' + dateLabel + '</div><div class="rec-masa">' + esc(r.masa || "") + '</div></div>' +
+      '<span class="badge ' + k + '">' + esc(badgeLabel) + '</span></div>';
     if (r.lokasi) html += '<div class="rec-loc">' + esc(r.lokasi) + '</div><br>';
     html += '<div class="rec-body">';
     if (r.suhu) html += '<div class="rec-metric"><div class="m-label">Suhu</div><div class="m-value">' + esc(r.suhu) + '&deg;C</div></div>';
